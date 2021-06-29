@@ -1,0 +1,221 @@
+---
+title: "Animal rescue incidents attended by London Fire Brigade, 2009-2021"
+author: "Laurence Horton"
+date: "28/06/2021"
+output: html_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r library, echo = FALSE, include = FALSE}
+library(tidyverse) # For data manipulation
+library(leaflet) # For mapping
+library(htmltools) # For popups on map
+```
+
+```{r read in data, echo = FALSE, include = FALSE}
+dataset <-
+  read_csv(
+    "https://data.london.gov.uk/download/animal-rescue-incidents-attended-by-lfb/8a7d91c2-9aec-4bde-937a-3998f4717cd8/Animal%20Rescue%20incidents%20attended%20by%20LFB%20from%20Jan%202009.csv",
+    col_names = FALSE
+  ) # Import without column names because it cases an error.
+dataset[1, 8] <-
+  "HourlyNotionalCost" # remove £ pound sign from vector
+dataset[1, 9] <-
+  "IncidentNotionalCost" # remove £ pound sign from vector
+names(dataset) <-
+  dataset %>% slice(1) %>% unlist() # move first row to column names
+dataset <- dataset %>% slice(-1)
+```
+
+```{r reformat borough as upper case, echo = FALSE, include = FALSE}
+dataset$Borough <-
+  toupper(dataset$Borough) # Change borough names to upper case for consistency
+```
+
+## Animal rescue incidents attended London Fire Brigade by London borough, 2009-2021
+I wondered what London borough had the greatest number of incidents over the period covered by the data set.
+```{r visualisation by borough, echo = FALSE}
+borough <- dataset %>%
+  select(Borough) %>%
+  group_by(Borough) %>%
+  summarise(Incidents = n()) %>% # Count number of incidents by borough
+  filter(Incidents > 1, na.rm = TRUE) %>% # Remove boroughs with less than one incident
+  na.omit() # Remove incidents without a borough
+
+# Visualisation
+ggplot(data = borough, aes(x = reorder(Borough, (Incidents)), y = Incidents)) +
+  geom_bar(stat = "identity") +
+  labs(
+    y = "Incidents",
+    x = "",
+    caption = "Data: London Fire Brigade",
+    title = "Animal rescue incidents attended by London Fire Brigade",
+    subtitle = "By London borough, 2009-2021"
+  ) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.x = element_line(colour = "grey", size = 0.25),
+    panel.grid.minor.x = element_blank(),
+    panel.background = element_rect(fill = "#FFFFFF", color = "white"),
+  ) +
+  scale_fill_brewer(palette = "Greys") +
+  coord_flip()
+```
+
+## Animal rescue incidents attended London Fire Brigade by region, 2009-2021
+London has an inner and outer region, so what's the pattern of incidents for those regions?
+```{r visualistation by region and year, echo = FALSE, message = FALSE}
+# Recode boroughs into London region, either Inner or Outer London.
+region <- dataset %>%
+  select(CalYear, Borough) %>%
+  na.omit() %>%
+  mutate(
+    Region = case_when(
+      Borough == "CAMDEN" |
+        Borough == "GREENWICH" |
+        Borough == "HACKNEY" |
+        Borough == "HAMMERSMITH AND FULHAM" |
+        Borough == "ISLINGTON" |
+        Borough == "KENSINGTON AND CHELSEA" |
+        Borough == "LAMBETH" |
+        Borough == "LEWISHAM" |
+        Borough == "SOUTHWARK" |
+        Borough == "TOWER HAMLETS" |
+        Borough == "WANDSWORTH" | Borough == "WESTMINSTER" ~ "Inner",
+      Borough != "CAMDEN" |
+        Borough != "GREENWICH" |
+        Borough != "HACKNEY" |
+        Borough != "HAMMERSMITH AND FULHAM" |
+        Borough != "ISLINGTON" |
+        Borough != "KENSINGTON AND CHELSEA" |
+        Borough != "LAMBETH" |
+        Borough != "LEWISHAM" |
+        Borough != "SOUTHWARK" |
+        Borough != "TOWER HAMLETS" |
+        Borough != "WANDSWORTH" | Borough != "WESTMINSTER" ~ "Outer"
+    )
+  ) %>%
+  group_by_at(vars(Region, CalYear)) %>%
+  summarise(Incidents = n())
+
+# Manipulate subset for visualisation
+inner <- region %>%
+  select(Region, CalYear, Incidents) %>%
+  filter(Region == "Inner") %>%
+  rename(Inner = Incidents)
+
+outer <- region %>%
+  select(Region, CalYear, Incidents) %>%
+  filter(Region == "Outer") %>%
+  rename(Outer = Incidents)
+
+# Calculate percentages for region by year.
+region_year <- inner_join(inner, outer, by = "CalYear")
+region_year <- region_year %>%
+  mutate(
+    InnerPct = round(Inner / (Inner + Outer) * 100, digits = 1),
+    OuterPct = round(Outer / (Inner + Outer) * 100, digits = 1)
+  )
+
+# Split them for a merge
+inner_pct <- region_year %>%
+  select(c(Region.x, CalYear, InnerPct)) %>%
+  rename(Region = Region.x, Pct = InnerPct, Year = CalYear)
+
+outer_pct <- region_year %>%
+  select(c(Region.y, CalYear, OuterPct)) %>%
+  rename(Region = Region.y, Pct = OuterPct, Year = CalYear)
+
+# Merge
+region_year_pct <- rbind(inner_pct, outer_pct)
+
+# Remove tables no longer needed.
+rm(inner, outer)
+
+# Visualisation of % share of incidents by year and region.
+ggplot(data = region_year_pct, aes(x = Year, y = Pct, fill = Region)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste0(Pct, sep = "%")),
+            position = position_stack(vjust = .5),
+            size = 2.5) +
+  scale_y_continuous(limits = c(0, 100)) +
+  labs(
+    y = "%",
+    x = "Year",
+    caption = "Data: London Fire Brigade",
+    title = "Animal rescue incidents attended by London Fire Brigade by region",
+    subtitle = "2009-2021"
+  ) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.x = element_line(colour = "grey", size = 0.25),
+    panel.grid.minor.x = element_blank(),
+    panel.background = element_rect(fill = "#FFFFFF", color = "white"),
+  ) +
+  scale_fill_brewer(palette = "Greys") +
+  coord_flip()
+```
+
+## Map of animal rescue incidents attended London Fire Brigade in Canning Town, 2009-2021
+I used to live in Canning Town so I wondered what kind of animal rescue incidents had occurred there.
+```{r map animal rescue incidents for Canning Town, echo = FALSE}
+# Create geobox for Canning Town
+n <- (51.5177) # north
+s <- (51.5070) # south
+e <- (0.0064) # east
+w <- (0.0347) # west
+
+# Create map
+map <-
+  dataset %>%
+  drop_na() %>% # Drop cases with no geocordinates
+  select(SpecialServiceType, Latitude, Longitude) %>%
+  filter(Latitude < n &
+           Latitude > s &
+           Longitude > e &
+           Longitude < w)
+rm(n, s, e, w)
+
+# Convert longitude and latitude to numeric
+map$Latitude <- as.numeric(map$Latitude)
+map$Longitude <- as.numeric(map$Longitude)
+
+# Add to map
+leaflet(map) %>% addTiles() %>%
+  addMarkers( ~ Longitude, ~ Latitude, popup = ~ htmlEscape(SpecialServiceType))
+```
+
+# Citations
+## Data
+London Fire Brigade (2021) Animal Rescue incidents attended by LFB from Jan 2009. *London Datastore* https://data.london.gov.uk/dataset/animal-rescue-incidents-attended-by-lfb available under an UK Government Open Licence (OGL v3) http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+
+## Code
+Horton, L. (2021). #TidyTuesday 2021-06-29 LFB Animal Rescues. GitHub repository, https://github.com/laurencehorton/tidytuesday
+published under Creative Commons Zero v1.0 Universal https://github.com/laurencehorton/torontobikeshare/blob/master/LICENSE
+
+## Packages
+Mock, T. (2021). *Tidy Tuesday: A weekly data project aimed at the R ecosystem*. https://github.com/rfordatascience/tidytuesday.
+
+Cheng, J., Karambelkar, B., Xie, Y. (2019). *leaflet: Create Interactive Web Maps with the JavaScript 'Leaflet' Library*. R package version 2.0.3. https://CRAN.R-project.org/package=leaflet
+
+Cheng, J., Sievert, C., Chang, W., Xie, Y., Allen, J. (2021). *htmltools: Tools for HTML*. R package version 0.5.1.1. https://CRAN.R-project.org/package=htmltools
+
+Mock, T. (2021). *Tidy Tuesday: A weekly data project aimed at the R ecosystem*. https://github.com/rfordatascience/tidytuesday.
+
+R Core Team (2018). *R: A language and environment for statistical computing. R Foundation for Statistical Computing*, Vienna, Austria. URL https://www.R-project.org/.
+
+Wickham, H., François, R., Henry, L., Müller K. (2021). *dplyr: A Grammar of Data Manipulation. R package version 1.0.6*. https://CRAN.R-project.org/package=dplyr
+
+```{r citations, echo = FALSE, include = FALSE}
+citation()
+citation("dplyr")
+citation("leaflet")
+citation("htmltools")
+sessionInfo()
+```
+
