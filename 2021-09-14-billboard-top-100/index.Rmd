@@ -1,0 +1,139 @@
+---
+title: 'Tidy Tuesday: *Billboard* Top 100'
+author: "Laurence Horton"
+date: "2021-09-14"
+output: html_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+```{r library, echo = FALSE, include = FALSE}
+library(tidyverse) # For data manipulation
+```
+
+Data this week comes from Data.World by way of Sean Miller, *Billboard* and Spotify.
+
+> "The *Billboard* Hot 100 is the music industry standard record chart in the United States for songs, published weekly by *Billboard* magazine. Chart rankings are based on sales (physical and digital), radio play, and online streaming in the United States."
+
+(*Billboard* Top 100, 2021)
+
+```{r read in data, include = FALSE}
+# Billboard data on chart performance of songs
+billboard <-
+  read_csv(
+    'https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-09-14/billboard.csv'
+  )
+
+# Spotify metadata about songs
+audio <-
+  read_csv(
+    'https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-09-14/audio_features.csv'
+  )
+```
+
+```{r tidy up and merge data, include = FALSE}
+# billboard <- rename(billboard, song, song_id) # rename column for merging the two data sets.
+songs <- merge(billboard, audio, "song_id")
+
+# We want only one entry for each time a record charts and add a year variable to show the year it charted.
+unique_songs <-
+  songs %>% distinct(song_id, .keep_all = TRUE) %>% mutate(year = week_id) # remove duplicates of song_id, create new variable for year based on the week_id for when the record made the charts.
+unique_songs$year <-
+  str_extract_all(unique_songs$year, "\\d{4}$") # Keep only last four characters of year variable.
+unique_songs$year <-
+  as.numeric(unique_songs$year) # Convert year to numeric.
+```
+
+There's around 29,000 unique records in the data set covering the years 1958 to 2021, and around 24,000 of these have Spotify metadata on the songs themselves. We can take a look at how characteristics of songs over time, so, just for this example, I've picked tempo in beats per minute (bpm) and loudness (db).
+
+## Tempo
+Tempo is a value for the pace of a piece of music, here measured in beats per minute. I was curious if records were getting faster, slower or if there was no significant change.
+
+The mean value for beats per minute across the data set is 120. Tempos range from an *allegretto* average of 114 (1999) to and *allegro* 126 (2011). Why is 120 bpm a magic number in chart music? I have no idea why, so here's a [reddit thread](https://www.reddit.com/r/musictheory/comments/1majyc/why_is_120_bpm_such_a_standard/) speculating on possible reasons (awilddeer, 2019).
+
+```{r tempo, include = FALSE}
+unique_songs_tempo <- unique_songs %>% drop_na("tempo") %>% filter(tempo > 0) # drop NA values and effective NA's (songs with a tempo of zero)
+tempo_year <- unique_songs_tempo %>% select(year, tempo) %>% group_by(year) # group by year
+tempo_year <- tempo_year %>% summarise(
+  tempo = mean(tempo)) # calculate average for all records in that year where data are available.
+```
+
+```{r tempo visualisation}
+ggplot(unique_songs_tempo, aes(x = year, y = tempo)) + 
+  geom_point(size = 1, colour = "grey") +
+  geom_line(data = tempo_year, size = 1, aes(colour = "Black")) +
+  labs(title = "One, two, three, four!",
+       subtitle = "Estimated tempo of song in beats per minute (bpm) for records on The *Billboard* Hot 100,\n1958-2021",
+       caption = "n=24223, data from TidyTuesday via Data.World by way of Sean Miller, Billboard.com and Spotify",
+       x = "Year charted",
+       y = "Estimated tempo (bpm)") +
+  scale_color_identity(name = "", guide = "legend", labels = c("Average"))
+```
+
+Here's what 120 bpm sounds like if you need a reference point (Channel R, 2008).
+```{r}
+knitr::include_app("https://commons.wikimedia.org/wiki/File:120BPMclicktrack.ogg?embedplayer=yes", height = "50px")
+```
+
+
+## Loudness
+By increasing the audio levels artist and producers hope to make their records stand out, but in doing so they can reduce the fidelity of the music. This is known as the "[loudness wars](https://www.theatlantic.com/entertainment/archive/2013/11/the-real-reason-musics-gotten-so-loud/281707/)" (Hinkes-Jones, 2013).
+
+Digital formats from the 1980s onward permitted additional techniques to make records sound even louder and we can see an upward trend in the 1990s, peaking in the 2000s, and as push back against loudness came we see a tailing off slightly in the 2010s. But records are still louder than in the days of the 7", and the db range of chart records is noticeably narrower.
+
+```{r}
+# loudness
+unique_songs_loudness <- unique_songs %>% drop_na("loudness") # drop NA values
+loudness_year <- unique_songs_loudness %>% select(year, loudness) %>% group_by(year) # group by year
+loudness_year <- loudness_year %>% summarise(
+  loudness = mean(loudness)) # calculate average for all records in that year where data are available.
+```
+
+```{r}
+ggplot(unique_songs_loudness, aes(x = year, y = loudness)) +
+  geom_point(size = 1, colour = "grey") +
+  geom_line(data = loudness_year, size = 1, aes(colour = "Black")) +
+labs(title = "These songs go up to 11",
+     subtitle = "Average loudness of a track in decibels (dB) for records on The *Billboard* Hot 100,\n1958-2021",
+     caption = "n=24224, data from TidyTuesday via Data.World by way of Sean Miller, Billboard.com and Spotify",
+     x = "Year charted",
+     y = "Loudness (db)",
+     colour = "Average") +
+  scale_color_identity(name = "", guide = "legend", labels = c("Average"))
+```
+
+# Citations
+## Data
+Miller, S. (2021) *Billboard* Hot weekly charts. *data.world* https://data.world/kcmillersean/billboard-hot-100-1958-2017
+
+
+## Bibliography
+awilddeer (2019, August 29). Why is 120 BPM such a standard [Online Forum Post]. Reddit. https://www.reddit.com/r/musictheory/comments/1majyc/why_is_120_bpm_such_a_standard/
+
+*Billboard* Hot 100 (n.d.). In Wikipedia. Retrieved September 14, 2021, from https://en.wikipedia.org/w/index.php?title=Billboard_Hot_100&oldid=1044125386
+
+Channel R (2008) 120BPMclicktrack.ogg. *English Wikipedia* https://commons.wikimedia.org/wiki/File:120BPMclicktrack.ogg
+This work has been released into the public domain by its author, Channel R. This applies worldwide.
+
+Hinkes-Jones, L. (2013, November 25) The Real Reason Music's Gotten So Loud. *The Atlantic*,  https://www.theatlantic.com/entertainment/archive/2013/11/the-real-reason-musics-gotten-so-loud/281707/
+
+
+## Code
+Horton, L. (2021). #TidyTuesday 2021-09-14 Billboard Top 100. GitHub repository, https://github.com/laurencehorton/tidytuesday/2021-09-29-billboard-top-100
+published under Creative Commons Zero v1.0 Universal Licence
+
+
+## Packages
+Mock, T. (2021). *Tidy Tuesday: A weekly data project aimed at the R ecosystem*. https://github.com/rfordatascience/tidytuesday.
+
+R Core Team (2018). *R: A language and environment for statistical computing. R Foundation for Statistical Computing*, Vienna, Austria. URL https://www.R-project.org/.
+
+Wickham, H., François, R., Henry, L., Müller K. (2021). *dplyr: A Grammar of Data Manipulation. R package version 1.0.6*. https://CRAN.R-project.org/package=dplyr
+
+```{r citations, echo = FALSE, include = FALSE}
+citation()
+citation("dplyr")
+sessionInfo()
+```
