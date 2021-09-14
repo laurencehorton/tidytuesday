@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Laurence Horton" />
+
+<meta name="date" content="2021-09-14" />
+
+<title>Tidy Tuesday: Billboard Top 100</title>
+
+<script src="site_libs/header-attrs-2.5/header-attrs.js"></script>
+<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/anchor-sections-1.0/anchor-sections.css" rel="stylesheet" />
+<script src="site_libs/anchor-sections-1.0/anchor-sections.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+</style>
+
+
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Tidy Tuesday: <em>Billboard</em> Top 100</h1>
+<h4 class="author">Laurence Horton</h4>
+<h4 class="date">2021-09-14</h4>
+
+</div>
+
+
+<p>Data this week comes from Data.World by way of Sean Miller, <em>Billboard</em> and Spotify.</p>
+<blockquote>
+<p>“The <em>Billboard</em> Hot 100 is the music industry standard record chart in the United States for songs, published weekly by <em>Billboard</em> magazine. Chart rankings are based on sales (physical and digital), radio play, and online streaming in the United States.”</p>
+</blockquote>
+<p>(<em>Billboard</em> Top 100, 2021)</p>
+<p>There’s around 29,000 unique records in the data set covering the years 1958 to 2021, and around 24,000 of these have Spotify metadata on the songs themselves. We can take a look at how characteristics of songs over time, so, just for this example, I’ve picked tempo in beats per minute (bpm) and loudness (db).</p>
+<div id="tempo" class="section level2">
+<h2>Tempo</h2>
+<p>Tempo is a value for the pace of a piece of music, here measured in beats per minute. I was curious if records were getting faster, slower or if there was no significant change.</p>
+<p>The mean value for beats per minute across the data set is 120. Tempos range from an <em>allegretto</em> average of 114 (1999) to and <em>allegro</em> 126 (2011). Why is 120 bpm a magic number in chart music? I have no idea why, so here’s a <a href="https://www.reddit.com/r/musictheory/comments/1majyc/why_is_120_bpm_such_a_standard/">reddit thread</a> speculating on possible reasons (awilddeer, 2019).</p>
+<p><img src="index_files/figure-html/tempo%20visualisation-1.png" width="672" /></p>
+<p>Here’s what 120 bpm sounds like if you need a reference point (Channel R, 2008). <iframe src="https://commons.wikimedia.org/wiki/File:120BPMclicktrack.ogg?embedplayer=yes" width="672" height="50px"></iframe></p>
+</div>
+<div id="loudness" class="section level2">
+<h2>Loudness</h2>
+<p>By increasing the audio levels artist and producers hope to make their records stand out, but in doing so they can reduce the fidelity of the music. This is known as the “<a href="https://www.theatlantic.com/entertainment/archive/2013/11/the-real-reason-musics-gotten-so-loud/281707/">loudness wars</a>” (Hinkes-Jones, 2013).</p>
+<p>Digital formats from the 1980s onward permitted additional techniques to make records sound even louder and we can see an upward trend in the 1990s, peaking in the 2000s, and as push back against loudness came we see a tailing off slightly in the 2010s. But records are still louder than in the days of the 7", and the db range of chart records is noticeably narrower.</p>
+<p><img src="index_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+</div>
+<div id="citations" class="section level1">
+<h1>Citations</h1>
+<div id="data" class="section level2">
+<h2>Data</h2>
+<p>Miller, S. (2021) <em>Billboard</em> Hot weekly charts. <em>data.world</em> <a href="https://data.world/kcmillersean/billboard-hot-100-1958-2017" class="uri">https://data.world/kcmillersean/billboard-hot-100-1958-2017</a></p>
+</div>
+<div id="bibliography" class="section level2">
+<h2>Bibliography</h2>
+<p>awilddeer (2019, August 29). Why is 120 BPM such a standard [Online Forum Post]. Reddit. <a href="https://www.reddit.com/r/musictheory/comments/1majyc/why_is_120_bpm_such_a_standard/" class="uri">https://www.reddit.com/r/musictheory/comments/1majyc/why_is_120_bpm_such_a_standard/</a></p>
+<p><em>Billboard</em> Hot 100 (n.d.). In Wikipedia. Retrieved September 14, 2021, from <a href="https://en.wikipedia.org/w/index.php?title=Billboard_Hot_100&amp;oldid=1044125386" class="uri">https://en.wikipedia.org/w/index.php?title=Billboard_Hot_100&amp;oldid=1044125386</a></p>
+<p>Channel R (2008) 120BPMclicktrack.ogg. <em>English Wikipedia</em> <a href="https://commons.wikimedia.org/wiki/File:120BPMclicktrack.ogg" class="uri">https://commons.wikimedia.org/wiki/File:120BPMclicktrack.ogg</a> This work has been released into the public domain by its author, Channel R. This applies worldwide.</p>
+<p>Hinkes-Jones, L. (2013, November 25) The Real Reason Music’s Gotten So Loud. <em>The Atlantic</em>, <a href="https://www.theatlantic.com/entertainment/archive/2013/11/the-real-reason-musics-gotten-so-loud/281707/" class="uri">https://www.theatlantic.com/entertainment/archive/2013/11/the-real-reason-musics-gotten-so-loud/281707/</a></p>
+</div>
+<div id="code" class="section level2">
+<h2>Code</h2>
+<p>Horton, L. (2021). #TidyTuesday 2021-09-14 Billboard Top 100. GitHub repository, <a href="https://github.com/laurencehorton/tidytuesday/2021-09-29-billboard-top-100" class="uri">https://github.com/laurencehorton/tidytuesday/2021-09-29-billboard-top-100</a> published under Creative Commons Zero v1.0 Universal Licence</p>
+</div>
+<div id="packages" class="section level2">
+<h2>Packages</h2>
+<p>Mock, T. (2021). <em>Tidy Tuesday: A weekly data project aimed at the R ecosystem</em>. <a href="https://github.com/rfordatascience/tidytuesday" class="uri">https://github.com/rfordatascience/tidytuesday</a>.</p>
+<p>R Core Team (2018). <em>R: A language and environment for statistical computing. R Foundation for Statistical Computing</em>, Vienna, Austria. URL <a href="https://www.R-project.org/" class="uri">https://www.R-project.org/</a>.</p>
+<p>Wickham, H., François, R., Henry, L., Müller K. (2021). <em>dplyr: A Grammar of Data Manipulation. R package version 1.0.6</em>. <a href="https://CRAN.R-project.org/package=dplyr" class="uri">https://CRAN.R-project.org/package=dplyr</a></p>
+</div>
+</div>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
